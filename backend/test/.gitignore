@@ -1,0 +1,6 @@
+# Ignore compiled setup/teardown scripts
+*.js
+*.d.ts
+
+# Keep the README
+!README.md
