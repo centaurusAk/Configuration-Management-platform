@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../../components/DashboardLayout';
 import { apiClient } from '../../../lib/api';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { useAuth } from '../../../contexts/AuthContext';
 
-interface ApiKey {
+interface ApiKeyEntry {
   id: string;
   prefix: string;
   project_id: string;
@@ -15,15 +16,28 @@ interface ApiKey {
   revoked: boolean;
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface Environment {
+  id: string;
+  name: string;
+}
+
 export default function ApiKeysPage() {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const { user } = useAuth();
+  const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Create form
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [projectId, setProjectId] = useState('');
-  const [environmentId, setEnvironmentId] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [creating, setCreating] = useState(false);
   
@@ -38,33 +52,65 @@ export default function ApiKeysPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      // For demo purposes, using placeholder project/env IDs
-      // In production, these would come from context/state
-      const response = await apiClient.getApiKeys('project-1', 'production');
+      const response = await apiClient.getApiKeys();
       setApiKeys(response.apiKeys || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch API keys');
+      if (err.response?.status === 403) {
+        setError('You do not have permission to view API keys. Admin access required.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to fetch API keys');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const data = await apiClient.getProjects();
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProjectId(data[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load projects:', err);
+    }
+  };
+
+  const fetchEnvironments = async (projectId: string) => {
+    try {
+      const data = await apiClient.getEnvironments(projectId);
+      setEnvironments(data);
+      if (data.length > 0) {
+        setSelectedEnvironmentId(data[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load environments:', err);
+    }
+  };
+
   useEffect(() => {
     fetchApiKeys();
+    fetchProjects();
   }, []);
 
+  useEffect(() => {
+    if (selectedProjectId) {
+      fetchEnvironments(selectedProjectId);
+    }
+  }, [selectedProjectId]);
+
   const handleCreateApiKey = async () => {
-    if (!projectId || !environmentId) {
-      alert('Please fill in all required fields');
+    if (!selectedProjectId || !selectedEnvironmentId) {
+      alert('Please select a project and environment');
       return;
     }
     
     try {
       setCreating(true);
       const data: any = {
-        projectId,
-        environmentId,
+        projectId: selectedProjectId,
+        environmentId: selectedEnvironmentId,
       };
       
       if (expiresAt) {
@@ -74,8 +120,6 @@ export default function ApiKeysPage() {
       const response = await apiClient.createApiKey(data);
       setGeneratedKey(response.key);
       setShowCreateForm(false);
-      setProjectId('');
-      setEnvironmentId('');
       setExpiresAt('');
       
       // Refresh the list
@@ -104,6 +148,24 @@ export default function ApiKeysPage() {
       alert(err.response?.data?.message || 'Failed to revoke API key');
     }
   };
+
+  // Non-admin guard
+  if (user?.role !== 'Admin') {
+    return (
+      <DashboardLayout>
+        <h1 style={{ marginTop: 0 }}>API Keys</h1>
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #fbbf24',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          color: '#92400e'
+        }}>
+          <strong>Access Restricted:</strong> Only administrators can manage API keys.
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -152,13 +214,11 @@ export default function ApiKeysPage() {
             
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                Project ID *
+                Project *
               </label>
-              <input
-                type="text"
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                placeholder="Enter project ID"
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -166,18 +226,20 @@ export default function ApiKeysPage() {
                   borderRadius: '4px',
                   fontSize: '0.875rem'
                 }}
-              />
+              >
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
             
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                Environment ID *
+                Environment *
               </label>
-              <input
-                type="text"
-                value={environmentId}
-                onChange={(e) => setEnvironmentId(e.target.value)}
-                placeholder="Enter environment ID"
+              <select
+                value={selectedEnvironmentId}
+                onChange={(e) => setSelectedEnvironmentId(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -185,7 +247,11 @@ export default function ApiKeysPage() {
                   borderRadius: '4px',
                   fontSize: '0.875rem'
                 }}
-              />
+              >
+                {environments.map(e => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
             </div>
             
             <div style={{ marginBottom: '1.5rem' }}>
@@ -359,8 +425,6 @@ export default function ApiKeysPage() {
               <thead>
                 <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Prefix</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Project ID</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Environment</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Created</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Expires</th>
                   <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Status</th>
@@ -373,8 +437,6 @@ export default function ApiKeysPage() {
                     <td style={{ padding: '0.75rem', fontFamily: 'monospace' }}>
                       {key.prefix}...
                     </td>
-                    <td style={{ padding: '0.75rem' }}>{key.project_id}</td>
-                    <td style={{ padding: '0.75rem' }}>{key.environment_id}</td>
                     <td style={{ padding: '0.75rem' }}>
                       {new Date(key.created_at).toLocaleDateString()}
                     </td>

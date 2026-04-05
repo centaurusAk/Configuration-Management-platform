@@ -13,6 +13,10 @@ async function bootstrap() {
     transform: true,
   }));
   
+  app.use((req: any, res: any, next: any) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
   app.enableCors();
   
   const port = process.env.PORT || 3000;

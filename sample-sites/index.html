@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Sites — Config Management Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0b10;
+      --surface: #13141c;
+      --border: #1e2030;
+      --text: #e4e4e7;
+      --text-muted: #71717a;
+      --primary: #6366f1;
+      --accent: #a855f7;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle { color: var(--text-muted); margin-bottom: 3rem; font-size: 1.05rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; max-width: 800px; width: 100%; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .card:hover { border-color: #2d3050; transform: translateY(-4px); box-shadow: 0 12px 40px rgba(99,102,241,0.1); }
+    .card:hover::before { opacity: 1; }
+    .card-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .card h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+    .badge {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 20px;
+      background: rgba(99,102,241,0.15);
+      color: #818cf8;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚙ Sample Sites</h1>
+  <p class="subtitle">Demonstrations powered by the Configuration Management Platform</p>
+  <div class="grid">
+    <a class="card" href="config-consumer/">
+      <div class="card-icon">🔌</div>
+      <h2>Config Consumer</h2>
+      <p>A developer tool to test fetching configuration values using the SDK endpoint. Supports context, auto-refresh, and live JSON previews.</p>
+      <span class="badge">Developer Tool</span>
+    </a>
+    <a class="card" href="shopping-store/">
+      <div class="card-icon">🛍️</div>
+      <h2>NeonKart Store</h2>
+      <p>A sample e-commerce storefront with a feature flag controlling a flash-sale banner. Toggle it live from the dashboard!</p>
+      <span class="badge">E-Commerce Demo</span>
+    </a>
+  </div>
+</body>
+</html>

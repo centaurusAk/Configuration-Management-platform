@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeonKart — Sample Store</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090d;
+      --surface: #111318;
+      --surface-2: #191b23;
+      --border: #1f2130;
+      --text: #eaeaed;
+      --text-muted: #6b6d7b;
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.12);
+      --accent: #f43f5e;
+      --accent-glow: rgba(244, 63, 94, 0.12);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --gold: #fbbf24;
+      --radius: 14px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      background: rgba(17,19,24,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      padding: 0 2rem;
+    }
+    .nav-inner {
+      max-width: 1200px; margin: auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      font-weight: 900; font-size: 1.35rem;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .nav-links { display: flex; gap: 1.75rem; align-items: center; }
+    .nav-links a {
+      color: var(--text-muted); text-decoration: none;
+      font-size: 0.875rem; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .cart-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text); padding: 0.5rem 1rem; border-radius: 8px;
+      font-size: 0.85rem; cursor: pointer; display: flex; gap: 0.4rem; align-items: center;
+    }
+
+    /* ─── FLASH SALE BANNER ─── */
+    .flash-banner {
+      background: linear-gradient(90deg, #dc2626, #f43f5e, #f97316, #f43f5e, #dc2626);
+      background-size: 200% 100%;
+      animation: shimmer 3s ease-in-out infinite;
+      padding: 0.85rem 2rem;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      display: none; /* hidden by default, toggled by config */
+    }
+    .flash-banner.visible { display: block; }
+    .flash-banner span { margin: 0 0.5rem; }
+    @keyframes shimmer { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+    /* ─── HERO ─── */
+    .hero {
+      max-width: 1200px; margin: 3rem auto 2rem; padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 2rem;
+    }
+    .hero-text h1 {
+      font-size: 2.8rem; font-weight: 900;
+      line-height: 1.15; margin-bottom: 1rem;
+    }
+    .hero-text h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-text p { color: var(--text-muted); font-size: 1.05rem; line-height: 1.7; max-width: 480px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--primary-glow); border: 1px solid rgba(99,102,241,0.2);
+      padding: 0.4rem 0.9rem; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 600; color: #818cf8;
+      margin-bottom: 1.25rem;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ─── CONFIG STATUS ─── */
+    .config-bar {
+      max-width: 1200px; margin: 0 auto 2rem; padding: 0 2rem;
+    }
+    .config-bar-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      font-size: 0.8rem;
+    }
+    .config-bar label { color: var(--text-muted); font-weight: 500; }
+    .config-bar input[type="text"] {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); padding: 0.4rem 0.65rem; border-radius: 6px;
+      font-family: inherit; font-size: 0.8rem; outline: none; width: 320px;
+    }
+    .config-bar input[type="text"]:focus { border-color: var(--primary); }
+    .config-bar .status {
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0.7rem; border-radius: 6px; font-weight: 500;
+    }
+    .config-bar .status.ok { background: rgba(34,197,94,0.1); color: var(--success); }
+    .config-bar .status.err { background: rgba(239,68,68,0.1); color: var(--accent); }
+    .config-bar .status.loading { background: rgba(99,102,241,0.1); color: #818cf8; }
+    .config-bar .status .sdot { width: 6px; height: 6px; border-radius: 50%; }
+    .config-bar .status.ok .sdot { background: var(--success); }
+    .config-bar .status.err .sdot { background: var(--accent); }
+    .config-bar .status.loading .sdot { background: #818cf8; animation: pulse 1s infinite; }
+    .auto-lbl { display: flex; align-items: center; gap: 0.35rem; color: var(--text-muted); cursor: pointer; user-select: none; }
+    .auto-lbl input { accent-color: var(--primary); }
+
+    /* ─── PRODUCTS ─── */
+    .section-title {
+      max-width: 1200px; margin: 0 auto; padding: 0 2rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-title h2 { font-size: 1.35rem; font-weight: 700; }
+    .section-title a { color: var(--primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+    .products {
+      max-width: 1200px; margin: 0 auto 3rem; padding: 0 2rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem;
+    }
+    .product {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden; transition: all 0.3s;
+      position: relative;
+    }
+    .product:hover { border-color: #2d3050; transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .product-img {
+      height: 200px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem;
+    }
+    .product-info { padding: 1.25rem; }
+    .product-info h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+    .product-info .desc { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .price-row { display: flex; align-items: center; justify-content: space-between; }
+    .product-price { font-size: 1.15rem; font-weight: 800; color: var(--primary); }
+    .product-price .original {
+      text-decoration: line-through; color: var(--text-muted);
+      font-weight: 500; font-size: 0.85rem; margin-left: 0.5rem;
+    }
+    .sale-badge {
+      position: absolute; top: 12px; right: 12px;
+      background: var(--accent); color: white;
+      padding: 0.25rem 0.6rem; border-radius: 6px;
+      font-size: 0.7rem; font-weight: 700;
+      display: none; /* toggled by config */
+    }
+    .sale-badge.visible { display: block; }
+    .add-btn {
+      background: var(--primary); color: white; border: none;
+      padding: 0.5rem 1rem; border-radius: 8px;
+      font-family: inherit; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .add-btn:hover { background: #5558e6; transform: scale(1.05); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      text-align: center; padding: 2rem;
+      color: var(--text-muted); font-size: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Flash Sale Banner (controlled by config) -->
+  <div class="flash-banner" id="flashBanner">
+    ⚡ <span>FLASH SALE</span> — Up to <strong>50% OFF</strong> on all items! Limited time only! ⚡
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <div class="logo">NeonKart</div>
+      <div class="nav-links">
+        <a href="#">Home</a>
+        <a href="#">Categories</a>
+        <a href="#">Deals</a>
+        <button class="cart-btn">🛒 Cart <span>(0)</span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-text">
+      <div class="hero-badge"><span class="dot"></span> Config-Driven Store</div>
+      <h1>Shop the future.<br>Powered by <em>config flags</em>.</h1>
+      <p>This store's features are controlled in real-time by the Configuration Management Platform. Toggle the flash sale banner from your dashboard — no deploy required.</p>
+    </div>
+  </div>
+
+  <!-- Config Status Bar -->
+  <div class="config-bar">
+    <div class="config-bar-inner">
+      <label>API Key:</label>
+      <input type="text" id="apiKeyInput" placeholder="Paste your SDK API key here">
+      <button class="add-btn" id="connectBtn" onclick="connectAndFetch()">Connect</button>
+      <div class="status loading" id="statusIndicator">
+        <span class="sdot"></span>
+        <span id="statusText">Not connected</span>
+      </div>
+      <label class="auto-lbl">
+        <input type="checkbox" id="autoRefresh"> Auto-refresh (3s)
+      </label>
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div class="section-title">
+    <h2>🔥 Trending Products</h2>
+    <a href="#">View All →</a>
+  </div>
+  <div class="products" id="productGrid"></div>
+
+  <!-- Footer -->
+  <footer>
+    NeonKart — A sample store powered by the Configuration Management Platform<br>
+    Feature flags • A/B testing • Dynamic configuration
+  </footer>
+
+  <script>
+    // ─── PRODUCTS DATA ───
+    const products = [
+      { emoji: '🎧', name: 'Wireless Pro Headphones', desc: 'Active noise cancellation, 40h battery', price: 299, salePrice: 149 },
+      { emoji: '⌚', name: 'SmartWatch Ultra', desc: 'Health tracking, always-on AMOLED display', price: 499, salePrice: 249 },
+      { emoji: '📱', name: 'PixelPhone 15', desc: '6.7" OLED, 50MP camera, 5G ready', price: 899, salePrice: 599 },
+      { emoji: '💻', name: 'DevBook Pro 16"', desc: 'M4 chip, 32GB RAM, 1TB SSD', price: 2499, salePrice: 1999 },
+      { emoji: '🎮', name: 'GamePad Elite', desc: 'Hall effect sticks, RGB, wireless', price: 79, salePrice: 39 },
+      { emoji: '🔊', name: 'SoundBar 360', desc: 'Dolby Atmos, 7.1.2 surround', price: 699, salePrice: 349 },
+      { emoji: '📷', name: 'ActionCam 5K', desc: 'Waterproof, stabilized, 5K@60fps', price: 399, salePrice: 199 },
+      { emoji: '🖥️', name: 'CurvedView Monitor', desc: '34" ultrawide, 165Hz, HDR600', price: 599, salePrice: 449 },
+    ];
+
+    let flashSaleEnabled = false;
+    let refreshInterval = null;
+
+    // ─── RENDER PRODUCTS ───
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = products.map(p => `
+        <div class="product">
+          <div class="sale-badge ${flashSaleEnabled ? 'visible' : ''}">${Math.round((1 - p.salePrice/p.price)*100)}% OFF</div>
+          <div class="product-img" style="background:linear-gradient(135deg, ${randomGrad()})">${p.emoji}</div>
+          <div class="product-info">
+            <h3>${p.name}</h3>
+            <p class="desc">${p.desc}</p>
+            <div class="price-row">
+              <span class="product-price">
+                $${flashSaleEnabled ? p.salePrice : p.price}
+                ${flashSaleEnabled ? `<span class="original">$${p.price}</span>` : ''}
+              </span>
+              <button class="add-btn">Add to Cart</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function randomGrad() {
+      const colors = [
+        '#1a1a2e,#16213e', '#1b1b2f,#162447', '#0f0f1a,#1a1a3e',
+        '#1a0a2e,#2d1b69', '#0d1117,#161b22', '#1a1423,#2d1f3d',
+        '#0a1628,#162447', '#1a0f0f,#2d1b1b',
+      ];
+      return colors[Math.floor(Math.random()*colors.length)];
+    }
+
+    // ─── CONFIG FETCHING ───
+    function setStatus(type, text) {
+      const indicator = document.getElementById('statusIndicator');
+      const textEl = document.getElementById('statusText');
+      indicator.className = 'status ' + type;
+      textEl.textContent = text;
+    }
+
+    async function connectAndFetch() {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      if (!apiKey) { setStatus('err', 'API Key required'); return; }
+
+      setStatus('loading', 'Connecting...');
+
+      try {
+        const resp = await fetch('http://localhost:3000/api/v1/sdk/config/store.flash_sale.enabled', {
+          headers: { 'X-API-Key': apiKey },
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const val = data.value === true || data.value === 'true';
+        flashSaleEnabled = val;
+
+        // Update banner
+        document.getElementById('flashBanner').className = 'flash-banner' + (val ? ' visible' : '');
+
+        // Re-render products with updated prices
+        renderProducts();
+
+        setStatus('ok', `${val ? '🔥 Flash Sale ON' : 'Sale OFF'} · ${new Date().toLocaleTimeString()}`);
+      } catch (err) {
+        setStatus('err', err.message);
+      }
+    }
+
+    // ─── AUTO REFRESH ───
+    document.getElementById('autoRefresh').addEventListener('change', function() {
+      if (this.checked) {
+        connectAndFetch();
+        refreshInterval = setInterval(connectAndFetch, 3000);
+      } else {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    });
+
+    // Allow Enter key in API key field
+    document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') connectAndFetch();
+    });
+
+    // Initial render
+    renderProducts();
+  </script>
+</body>
+</html>

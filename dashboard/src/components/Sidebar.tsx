@@ -9,12 +9,16 @@ export function Sidebar() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/dashboard/configs', label: 'Configurations' },
-    { href: '/dashboard/rules', label: 'Rules' },
-    { href: '/dashboard/audit', label: 'Audit Logs' },
-    { href: '/dashboard/api-keys', label: 'API Keys' },
+    { href: '/dashboard', label: 'Dashboard', roles: ['Admin', 'Editor', 'Viewer'] },
+    { href: '/dashboard/configs', label: 'Configurations', roles: ['Admin', 'Editor', 'Viewer'] },
+    { href: '/dashboard/rules', label: 'Rules', roles: ['Admin', 'Editor', 'Viewer'] },
+    { href: '/dashboard/audit', label: 'Audit Logs', roles: ['Admin', 'Editor', 'Viewer'] },
+    { href: '/dashboard/api-keys', label: 'API Keys', roles: ['Admin'] },
   ];
+
+  const visibleItems = navItems.filter(item => 
+    item.roles.includes(user?.role || '')
+  );
 
   return (
     <div style={{
@@ -30,7 +34,7 @@ export function Sidebar() {
       </div>
 
       <nav style={{ flex: 1, padding: '1rem' }}>
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -51,8 +55,8 @@ export function Sidebar() {
 
       <div style={{ padding: '1rem', borderTop: '1px solid #334155' }}>
         <div style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
-          <div>{user?.name}</div>
-          <div style={{ color: '#94a3b8' }}>{user?.email}</div>
+          <div style={{ fontWeight: 500 }}>{user?.email}</div>
+          <div style={{ color: '#94a3b8' }}>{user?.organizationName}</div>
           <div style={{ color: '#94a3b8' }}>Role: {user?.role}</div>
         </div>
         <button

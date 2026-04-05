@@ -29,14 +29,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (credentials: LoginCredentials) => {
     try {
       const response = await apiClient.login(credentials.email, credentials.password);
-      const { token: newToken, user: newUser } = response;
+      const { token: newToken, user: backendUser } = response;
+
+      const mappedUser: User = {
+        id: backendUser.id,
+        email: backendUser.email,
+        role: backendUser.role,
+        organizationId: backendUser.organizationId || backendUser.organization_id,
+        organizationName: backendUser.organizationName || '',
+      };
 
       setToken(newToken);
-      setUser(newUser);
+      setUser(mappedUser);
       apiClient.setToken(newToken);
 
       localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(newUser));
+      localStorage.setItem('auth_user', JSON.stringify(mappedUser));
 
       router.push('/dashboard');
     } catch (error) {

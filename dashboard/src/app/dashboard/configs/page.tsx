@@ -17,6 +17,16 @@ interface ConfigKey {
   updated_at: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface Environment {
+  id: string;
+  name: string;
+}
+
 export default function ConfigsPage() {
   const { user } = useAuth();
   const [configs, setConfigs] = useState<ConfigKey[]>([]);
@@ -25,21 +35,55 @@ export default function ConfigsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
+  // Project/Environment state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
+
   useEffect(() => {
+    loadProjects();
     loadConfigs();
   }, []);
+
+  useEffect(() => {
+    if (selectedProject) {
+      loadEnvironments(selectedProject);
+    }
+  }, [selectedProject]);
+
+  const loadProjects = async () => {
+    try {
+      const data = await apiClient.getProjects();
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProject(data[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load projects:', err);
+    }
+  };
+
+  const loadEnvironments = async (projectId: string) => {
+    try {
+      const data = await apiClient.getEnvironments(projectId);
+      setEnvironments(data);
+      if (data.length > 0) {
+        setSelectedEnvironment(data[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load environments:', err);
+    }
+  };
 
   const loadConfigs = async () => {
     try {
       setLoading(true);
       setError(null);
-      // TODO: Replace with actual project and environment IDs from context/state
-      const projectId = 'default-project';
-      const environmentId = 'default-environment';
-      const data = await apiClient.getConfigs(projectId, environmentId);
+      const data = await apiClient.getConfigs();
       setConfigs(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load configurations');
+      setError(err.response?.data?.message || err.message || 'Failed to load configurations');
     } finally {
       setLoading(false);
     }
@@ -48,7 +92,10 @@ export default function ConfigsPage() {
   const filteredConfigs = configs.filter(config => {
     const matchesSearch = config.key_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || config.value_type === filterType;
-    return matchesSearch && matchesType;
+    // Filter by selected project/environment if available
+    const matchesProject = !selectedProject || config.project_id === selectedProject;
+    const matchesEnv = !selectedEnvironment || config.environment_id === selectedEnvironment;
+    return matchesSearch && matchesType && matchesProject && matchesEnv;
   });
 
   const formatValue = (value: any, type: string) => {
@@ -57,6 +104,9 @@ export default function ConfigsPage() {
     }
     return String(value);
   };
+
+  const selectedProjectName = projects.find(p => p.id === selectedProject)?.name || '';
+  const selectedEnvName = environments.find(e => e.id === selectedEnvironment)?.name || '';
 
   return (
     <DashboardLayout>
@@ -79,12 +129,53 @@ export default function ConfigsPage() {
           </button>
         </div>
 
+        {/* Project/Environment Selector */}
+        <div style={{
+          backgroundColor: 'white',
+          padding: '1rem 1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          gap: '1rem',
+          alignItems: 'center'
+        }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Project</label>
+            <select
+              value={selectedProject}
+              onChange={(e) => setSelectedProject(e.target.value)}
+              style={{ padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.875rem' }}
+            >
+              <option value="">All Projects</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Environment</label>
+            <select
+              value={selectedEnvironment}
+              onChange={(e) => setSelectedEnvironment(e.target.value)}
+              style={{ padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.875rem' }}
+            >
+              <option value="">All Environments</option>
+              {environments.map(e => (
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Import/Export Component */}
-        <ImportExport
-          projectId="default-project"
-          environmentId="default-environment"
-          onImportComplete={loadConfigs}
-        />
+        {selectedProject && selectedEnvironment && (
+          <ImportExport
+            projectId={selectedProject}
+            environmentId={selectedEnvironment}
+            onImportComplete={loadConfigs}
+          />
+        )}
 
         <div style={{
           backgroundColor: 'white',

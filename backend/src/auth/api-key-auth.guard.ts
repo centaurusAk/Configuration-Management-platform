@@ -18,22 +18,29 @@ export class ApiKeyAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     
-    // Extract API key from Authorization header
-    // Expected format: "Bearer <api_key>" or "ApiKey <api_key>"
+    // Extract API key from X-API-Key header or Authorization header
+    // Supports: X-API-Key: <api_key>, Authorization: "Bearer <api_key>", Authorization: "ApiKey <api_key>"
+    let key: string | undefined;
+
+    const xApiKey = request.headers['x-api-key'];
     const authHeader = request.headers['authorization'];
-    
-    if (!authHeader) {
-      throw new UnauthorizedException('API key required');
+
+    if (xApiKey) {
+      key = xApiKey;
+    } else if (authHeader) {
+      const parts = authHeader.split(' ');
+      if (parts.length !== 2) {
+        throw new UnauthorizedException('Invalid authorization header format');
+      }
+      const [scheme, token] = parts;
+      if (scheme !== 'Bearer' && scheme !== 'ApiKey') {
+        throw new UnauthorizedException('Invalid authorization scheme');
+      }
+      key = token;
     }
 
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2) {
-      throw new UnauthorizedException('Invalid authorization header format');
-    }
-
-    const [scheme, key] = parts;
-    if (scheme !== 'Bearer' && scheme !== 'ApiKey') {
-      throw new UnauthorizedException('Invalid authorization scheme');
+    if (!key) {
+      throw new UnauthorizedException('API key required. Use X-API-Key header or Authorization: Bearer/ApiKey <key>');
     }
 
     // Validate API key

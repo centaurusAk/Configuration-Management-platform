@@ -15,8 +15,8 @@ export default function DashboardPage() {
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
-        <h2>Welcome, {user?.name}!</h2>
-        <p>Organization: {user?.organizationId}</p>
+        <h2>Welcome, {user?.email}!</h2>
+        <p>Organization: {user?.organizationName}</p>
         <p>Role: {user?.role}</p>
         
         <div style={{ marginTop: '2rem' }}>

@@ -58,7 +58,7 @@ export default function ConfigHistoryPage() {
 
   const handleRollback = async (versionId: string) => {
     try {
-      await apiClient.rollbackConfig(configId, versionId, user?.id || 'unknown');
+      await apiClient.rollbackConfig(configId, versionId);
       await loadData();
       alert('Configuration rolled back successfully!');
     } catch (err: any) {

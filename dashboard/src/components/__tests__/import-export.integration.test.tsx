@@ -16,6 +16,13 @@ jest.mock('../../lib/api', () => ({
   },
 }));
 
+// Mock AuthContext
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user-id', organizationId: 'org-1' },
+  }),
+}));
+
 describe('Import/Export Integration Tests', () => {
   const mockProjectId = 'project-1';
   const mockEnvironmentId = 'production';
@@ -23,11 +30,11 @@ describe('Import/Export Integration Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock URL.createObjectURL and URL.revokeObjectURL
     global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
     global.URL.revokeObjectURL = jest.fn();
-    
+
     // Mock document.createElement for download anchor only
     const originalCreateElement = document.createElement.bind(document);
     const mockAnchor = originalCreateElement('a');
@@ -118,7 +125,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     // Create a mock file
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
@@ -157,7 +164,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File(['invalid json'], 'configs.json', {
       type: 'application/json',
     });
@@ -206,7 +213,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
     });
@@ -233,7 +240,15 @@ describe('Import/Export Integration Tests', () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(apiClient.importConfigs).toHaveBeenCalledWith(mockImportData);
+      expect(apiClient.importConfigs).toHaveBeenCalledWith(
+        {
+          ...mockImportData,
+          environmentId: mockEnvironmentId,
+          organizationId: 'org-1',
+          projectId: mockProjectId,
+        },
+        'test-user-id'
+      );
       expect(screen.getByText('Import Successful!')).toBeInTheDocument();
       expect(screen.getByText(/Created: 1/)).toBeInTheDocument();
       expect(mockOnImportComplete).toHaveBeenCalled();
@@ -268,7 +283,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
     });
@@ -322,7 +337,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
     });
@@ -370,7 +385,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
     });
@@ -418,7 +433,7 @@ describe('Import/Export Integration Tests', () => {
     );
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    
+
     const file = new File([JSON.stringify(mockImportData)], 'configs.json', {
       type: 'application/json',
     });

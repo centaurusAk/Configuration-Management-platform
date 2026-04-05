@@ -89,6 +89,13 @@ export class ConfigService {
   ) {}
 
   /**
+   * List all configuration keys for an organization
+   */
+  async listByOrganization(organizationId: string): Promise<ConfigKey[]> {
+    return this.configKeyRepository.findAll(organizationId);
+  }
+
+  /**
    * Create a new configuration key
    * Requirement 1.1: Store config in database with organization, project, and environment
    * Requirement 1.2: Initialize with default value and create first version

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ImportExportProps {
   projectId: string;
@@ -10,6 +11,7 @@ interface ImportExportProps {
 }
 
 export function ImportExport({ projectId, environmentId, onImportComplete }: ImportExportProps) {
+  const { user } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -21,9 +23,9 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
     try {
       setExporting(true);
       setError(null);
-      
-      const data = await apiClient.exportConfigs(projectId, environmentId);
-      
+
+      const data = await apiClient.exportConfigs(user?.organizationId || '', projectId, environmentId);
+
       // Create a blob and download
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -48,13 +50,75 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
       setImportPreview(null);
       setImportResult(null);
       setError(null);
-      
+
       // Read and parse the file for preview
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
           const json = JSON.parse(event.target?.result as string);
-          setImportPreview(json);
+
+          // Check if it's not the standard export format
+          let importedData = json;
+          if (!json.configs) {
+            // Flatten a generic JSON object into configs array
+            // Assuming string/number/boolean/object mapping
+            const flattenedConfigs: any[] = [];
+
+            const flatten = (obj: any, prefix = '') => {
+              for (const [key, value] of Object.entries(obj)) {
+                const newKey = prefix ? `${prefix}.${key}` : key;
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                  // If we want nested keys as string dots
+                  flatten(value, newKey);
+                  // Alternatively we could store the whole object as 'json'
+                  // We'll store it as 'json' type if it's an object to match the user screenshot which seems to be root-level JSON config keys
+                  flattenedConfigs.push({
+                    keyName: newKey,
+                    valueType: 'json',
+                    currentValue: value,
+                    rules: []
+                  });
+                } else {
+                  flattenedConfigs.push({
+                    keyName: newKey,
+                    valueType: typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string',
+                    currentValue: value,
+                    rules: []
+                  });
+                }
+              }
+            };
+
+            // For root level
+            for (const [key, value] of Object.entries(json)) {
+              let valueType = 'string';
+              if (typeof value === 'boolean') valueType = 'boolean';
+              else if (typeof value === 'number') valueType = 'number';
+              else if (typeof value === 'object') valueType = 'json';
+
+              flattenedConfigs.push({
+                keyName: key,
+                valueType,
+                currentValue: value,
+                rules: []
+              });
+            }
+
+            importedData = {
+              version: '1.0',
+              configs: flattenedConfigs,
+              rules: []
+            };
+          }
+
+          // Ensure organizationId, projectId, and environmentId are set
+          if (user) {
+            importedData.organizationId = user.organizationId;
+          }
+          importedData.projectId = projectId;
+          importedData.environmentId = environmentId;
+
+          setImportPreview(importedData);
         } catch (err) {
           setError('Invalid JSON file');
         }
@@ -68,16 +132,21 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
       setError('Please select a valid JSON file');
       return;
     }
-    
+
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
+
     try {
       setImporting(true);
       setError(null);
-      
+
       const result = await apiClient.importConfigs(importPreview);
       setImportResult(result);
       setImportFile(null);
       setImportPreview(null);
-      
+
       if (onImportComplete) {
         onImportComplete();
       }
@@ -96,15 +165,15 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
   };
 
   return (
-    <div style={{ 
-      backgroundColor: 'white', 
-      padding: '1.5rem', 
+    <div style={{
+      backgroundColor: 'white',
+      padding: '1.5rem',
       borderRadius: '8px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       marginBottom: '1.5rem'
     }}>
       <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>Import / Export</h2>
-      
+
       {error && (
         <div style={{
           backgroundColor: '#fee2e2',
@@ -149,7 +218,7 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
           Upload a JSON file to import configurations and rules. Existing configurations will be updated.
         </p>
-        
+
         <div style={{ marginBottom: '1rem' }}>
           <input
             type="file"
@@ -183,7 +252,7 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
                 Rules: {importPreview.rules?.length || 0}
               </p>
             </div>
-            
+
             <details style={{ marginTop: '1rem' }}>
               <summary style={{ cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}>
                 View Full JSON
@@ -201,7 +270,7 @@ export function ImportExport({ projectId, environmentId, onImportComplete }: Imp
                 {JSON.stringify(importPreview, null, 2)}
               </pre>
             </details>
-            
+
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
               <button
                 onClick={handleImport}

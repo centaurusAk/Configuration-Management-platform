@@ -5,19 +5,46 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/a
 export class ApiClient {
   private client: AxiosInstance;
 
-  constructor(token?: string) {
+  constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
+
+    // Dynamically attach token to every request from localStorage
+    this.client.interceptors.request.use((config) => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+      return config;
+    });
+
+    // Add interceptor to handle 401 Unauthorized globally
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Clear local auth state
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          // Redirect to login if we're not already there
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   setToken(token: string) {
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // Left for backwards compatibility, handled by request interceptor now
   }
 
   clearToken() {
-    delete this.client.defaults.headers.common['Authorization'];
+    // Left for backwards compatibility, handled by request interceptor now
   }
 
   async login(email: string, password: string) {
@@ -26,18 +53,33 @@ export class ApiClient {
   }
 
   async register(email: string, password: string, organizationName: string) {
-    const response = await this.client.post('/auth/register', { 
-      email, 
-      password, 
-      organizationName 
+    const response = await this.client.post('/auth/register', {
+      email,
+      password,
+      organizationName
     });
     return response.data;
   }
 
-  async getConfigs(projectId: string, environmentId: string) {
-    const response = await this.client.get('/configs', {
-      params: { projectId, environmentId },
-    });
+  async getMe() {
+    const response = await this.client.get('/auth/me');
+    return response.data;
+  }
+
+  // Projects & Environments
+  async getProjects() {
+    const response = await this.client.get('/projects');
+    return response.data;
+  }
+
+  async getEnvironments(projectId: string) {
+    const response = await this.client.get(`/projects/${projectId}/environments`);
+    return response.data;
+  }
+
+  // Configs
+  async getConfigs() {
+    const response = await this.client.get('/configs');
     return response.data;
   }
 
@@ -46,12 +88,19 @@ export class ApiClient {
     return response.data;
   }
 
-  async createConfig(data: any) {
+  async createConfig(data: {
+    projectId: string;
+    environmentId: string;
+    keyName: string;
+    valueType: 'boolean' | 'string' | 'number' | 'json';
+    defaultValue: any;
+    schema?: object;
+  }) {
     const response = await this.client.post('/configs', data);
     return response.data;
   }
 
-  async updateConfig(id: string, data: any) {
+  async updateConfig(id: string, data: { value: any }) {
     const response = await this.client.put(`/configs/${id}`, data);
     return response.data;
   }
@@ -66,11 +115,12 @@ export class ApiClient {
     return response.data;
   }
 
-  async rollbackConfig(id: string, versionId: string, rolledBackBy: string) {
-    const response = await this.client.post(`/configs/${id}/rollback`, { versionId, rolledBackBy });
+  async rollbackConfig(id: string, versionId: string) {
+    const response = await this.client.post(`/configs/${id}/rollback`, { versionId });
     return response.data;
   }
 
+  // Rules
   async getRules(configId: string) {
     const response = await this.client.get(`/rules/config/${configId}`);
     return response.data;
@@ -99,22 +149,22 @@ export class ApiClient {
     return response.data;
   }
 
+  // Audit Logs
   async getAuditLogs(filters?: {
-    dateRange?: { start: string; end: string };
     userId?: string;
     actionType?: string;
     resourceType?: string;
+    startDate?: string;
+    endDate?: string;
     limit?: number;
-    offset?: number;
   }) {
     const response = await this.client.get('/audit-logs', { params: filters });
     return response.data;
   }
 
-  async getApiKeys(projectId: string, environmentId: string) {
-    const response = await this.client.get('/api-keys', {
-      params: { projectId, environmentId },
-    });
+  // API Keys
+  async getApiKeys() {
+    const response = await this.client.get('/api-keys');
     return response.data;
   }
 
@@ -132,15 +182,18 @@ export class ApiClient {
     return response.data;
   }
 
-  async exportConfigs(projectId: string, environmentId: string) {
+  // Export/Import
+  async exportConfigs(organizationId: string, projectId: string, environmentId: string) {
     const response = await this.client.get('/configs/export', {
-      params: { projectId, environmentId },
+      params: { organizationId, projectId, environmentId },
     });
     return response.data;
   }
 
   async importConfigs(data: any) {
-    const response = await this.client.post('/configs/import', data);
+    const response = await this.client.post('/configs/import', {
+      data,
+    });
     return response.data;
   }
 }

@@ -3,6 +3,7 @@ import {
   Get,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuditLogService } from '../services/audit-log.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,6 +19,7 @@ export class AuditLogController {
   @Get()
   @RequirePermission(Permission.READ_AUDIT)
   async getAuditLogs(
+    @Req() req: any,
     @Query('userId') userId?: string,
     @Query('actionType') actionType?: 'CREATE' | 'UPDATE' | 'DELETE' | 'ROLLBACK',
     @Query('resourceType') resourceType?: 'CONFIG_KEY' | 'CONFIG_VERSION' | 'RULE' | 'API_KEY' | 'USER',
@@ -25,7 +27,10 @@ export class AuditLogController {
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
   ) {
-    const filters: any = {};
+    const user = req.user;
+    const filters: any = {
+      organizationId: user.organization_id,
+    };
     if (userId) filters.userId = userId;
     if (actionType) filters.actionType = actionType;
     if (resourceType) filters.resourceType = resourceType;
@@ -34,6 +39,7 @@ export class AuditLogController {
     }
     if (limit) filters.limit = parseInt(limit, 10);
 
-    return this.auditLogService.query(filters);
+    const logs = await this.auditLogService.query(filters);
+    return { logs, total: logs.length };
   }
 }

@@ -11,8 +11,25 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '../../../lib/api';
 import { useAuth } from '../../../contexts/AuthContext';
 
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface Environment {
+  id: string;
+  name: string;
+}
+
+interface ConfigKey {
+  id: string;
+  key_name: string;
+  project_id: string;
+  environment_id: string;
+}
+
 export default function RulesPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [rules, setRules] = useState<Rule[]>([]);
   const [selectedConfigId, setSelectedConfigId] = useState<string>('');
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
@@ -31,6 +48,13 @@ export default function RulesPage() {
   });
   const [showTester, setShowTester] = useState(false);
 
+  // Selector state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [configs, setConfigs] = useState<ConfigKey[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>('');
+
   useEffect(() => {
     if (token) {
       apiClient.setToken(token);
@@ -38,10 +62,60 @@ export default function RulesPage() {
   }, [token]);
 
   useEffect(() => {
+    loadProjects();
+    loadConfigs();
+  }, []);
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      loadEnvironments(selectedProjectId);
+    }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
     if (selectedConfigId) {
       loadRules();
+    } else {
+      setRules([]);
     }
   }, [selectedConfigId]);
+
+  const loadProjects = async () => {
+    try {
+      const data = await apiClient.getProjects();
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProjectId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+    }
+  };
+
+  const loadEnvironments = async (projectId: string) => {
+    try {
+      const data = await apiClient.getEnvironments(projectId);
+      setEnvironments(data);
+      if (data.length > 0) {
+        setSelectedEnvironmentId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load environments:', err);
+    }
+  };
+
+  const loadConfigs = async () => {
+    try {
+      const data = await apiClient.getConfigs();
+      setConfigs(data);
+    } catch (err) {
+      console.error('Failed to load configs:', err);
+    }
+  };
+
+  const filteredConfigs = configs.filter(
+    (c) => c.project_id === selectedProjectId && c.environment_id === selectedEnvironmentId
+  );
 
   const loadRules = async () => {
     if (!selectedConfigId) return;
@@ -205,34 +279,111 @@ export default function RulesPage() {
         padding: '1.5rem',
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        marginBottom: '1.5rem'
+        marginBottom: '1.5rem',
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'flex-end',
+        flexWrap: 'wrap'
       }}>
-        <label style={{
-          display: 'block',
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          color: '#374151',
-          marginBottom: '0.5rem'
-        }}>
-          Select Configuration Key
-        </label>
-        <input
-          type="text"
-          value={selectedConfigId}
-          onChange={(e) => setSelectedConfigId(e.target.value)}
-          placeholder="Enter config key ID"
-          style={{
-            width: '100%',
-            padding: '0.5rem',
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <label style={{
+            display: 'block',
             fontSize: '0.875rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            outline: 'none'
-          }}
-        />
-        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-          Enter the configuration key ID to manage its rules
-        </p>
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Project
+          </label>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => {
+              setSelectedProjectId(e.target.value);
+              setSelectedConfigId('');
+            }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              outline: 'none'
+            }}
+          >
+            <option value="">Select Project</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Environment
+          </label>
+          <select
+            value={selectedEnvironmentId}
+            onChange={(e) => {
+              setSelectedEnvironmentId(e.target.value);
+              setSelectedConfigId('');
+            }}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              outline: 'none'
+            }}
+          >
+            <option value="">Select Environment</option>
+            {environments.map(e => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Configuration Key
+          </label>
+          <select
+            value={selectedConfigId}
+            onChange={(e) => setSelectedConfigId(e.target.value)}
+            disabled={!selectedProjectId || !selectedEnvironmentId}
+            style={{
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.875rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              outline: 'none',
+              backgroundColor: (!selectedProjectId || !selectedEnvironmentId) ? '#f3f4f6' : 'white'
+            }}
+          >
+            <option value="">Select Configuration</option>
+            {filteredConfigs.map(c => (
+              <option key={c.id} value={c.id}>{c.key_name}</option>
+            ))}
+          </select>
+          {filteredConfigs.length === 0 && selectedProjectId && selectedEnvironmentId && (
+            <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem', position: 'absolute' }}>
+              No configs in this environment
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Messages */}

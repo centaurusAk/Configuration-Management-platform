@@ -39,21 +39,17 @@ export default function AuditPage() {
       setLoading(true);
       setError(null);
       
-      const filters: any = {
-        limit,
-        offset: (page - 1) * limit,
-      };
-      
-      if (startDate && endDate) {
-        filters.dateRange = { start: startDate, end: endDate };
-      }
+      const filters: any = {};
+      if (limit) filters.limit = limit;
+      if (startDate) filters.startDate = startDate;
+      if (endDate) filters.endDate = endDate;
       if (userId) filters.userId = userId;
       if (actionType) filters.actionType = actionType;
       if (resourceType) filters.resourceType = resourceType;
       
       const response = await apiClient.getAuditLogs(filters);
       setLogs(response.logs || []);
-      setTotalPages(Math.ceil((response.total || 0) / limit));
+      setTotalPages(Math.ceil((response.total || 0) / limit) || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch audit logs');
     } finally {

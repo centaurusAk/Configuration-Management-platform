@@ -7,12 +7,15 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
   ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
+import { IsString, IsOptional, IsArray, ValidateNested, IsIn, IsDefined, IsObject, Allow } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ConfigService } from '../services/config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -20,47 +23,76 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { Permission } from '../auth/permissions';
 import { CircuitBreaker } from '../services/circuit-breaker';
 
-// DTOs for request/response
+// DTOs for request/response — all properties decorated so ValidationPipe doesn't strip them
+
 export class CreateConfigDto {
-  organizationId: string;
+  @IsString()
   projectId: string;
+
+  @IsString()
   environmentId: string;
+
+  @IsString()
   keyName: string;
+
+  @IsIn(['boolean', 'string', 'number', 'json'])
   valueType: 'boolean' | 'string' | 'number' | 'json';
+
+  @IsDefined()
+  @Allow()
   defaultValue: any;
+
+  @IsOptional()
+  @IsObject()
   schema?: object;
-  createdBy: string;
 }
 
 export class UpdateConfigDto {
+  @IsDefined()
+  @Allow()
   value: any;
-  updatedBy: string;
 }
 
 export class RollbackDto {
+  @IsString()
   versionId: string;
-  rolledBackBy: string;
 }
 
 export class BulkUpdateItemDto {
+  @IsString()
   configId: string;
+
+  @IsDefined()
+  @Allow()
   value: any;
 }
 
 export class BulkUpdateDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkUpdateItemDto)
   updates: BulkUpdateItemDto[];
-  updatedBy: string;
 }
 
 export class ExportQueryDto {
+  @IsString()
   organizationId: string;
+
+  @IsString()
   projectId: string;
+
+  @IsString()
   environmentId: string;
 }
 
 export class ImportDto {
+  @IsDefined()
+  @IsObject()
   data: any; // ExportData type from ConfigService
-  importedBy: string;
+
+  @IsOptional()
+  @IsString()
+  importedBy?: string;
 }
 
 @Controller('configs')
@@ -79,6 +111,13 @@ export class ConfigController {
   }
 
   // Static routes must be defined before parameterized routes
+  @Get()
+  @RequirePermission(Permission.READ_CONFIG)
+  async list(@Req() req: any) {
+    const user = req.user;
+    return this.configService.listByOrganization(user.organization_id);
+  }
+
   @Get('export')
   @RequirePermission(Permission.READ_CONFIG)
   async export(@Query() query: ExportQueryDto) {
@@ -91,10 +130,13 @@ export class ConfigController {
 
   @Post('bulk')
   @RequirePermission(Permission.WRITE_CONFIG)
-  async bulkUpdate(@Body() dto: BulkUpdateDto) {
+  async bulkUpdate(@Body() dto: BulkUpdateDto, @Req() req: any) {
     try {
       return await this.dbCircuitBreaker.execute(() =>
-        this.configService.bulkUpdate(dto)
+        this.configService.bulkUpdate({
+          updates: dto.updates,
+          updatedBy: req.user.id,
+        })
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {
@@ -107,10 +149,10 @@ export class ConfigController {
 
   @Post('import')
   @RequirePermission(Permission.WRITE_CONFIG)
-  async import(@Body() dto: ImportDto) {
+  async import(@Body() dto: ImportDto, @Req() req: any) {
     try {
       return await this.dbCircuitBreaker.execute(() =>
-        this.configService.importConfigs(dto.data, dto.importedBy)
+        this.configService.importConfigs(dto.data, req.user.id)
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {
@@ -123,10 +165,19 @@ export class ConfigController {
 
   @Post()
   @RequirePermission(Permission.WRITE_CONFIG)
-  async create(@Body() dto: CreateConfigDto) {
+  async create(@Body() dto: CreateConfigDto, @Req() req: any) {
     try {
-      return await this.dbCircuitBreaker.execute(() => 
-        this.configService.create(dto)
+      return await this.dbCircuitBreaker.execute(() =>
+        this.configService.create({
+          organizationId: req.user.organization_id,
+          projectId: dto.projectId,
+          environmentId: dto.environmentId,
+          keyName: dto.keyName,
+          valueType: dto.valueType,
+          defaultValue: dto.defaultValue,
+          schema: dto.schema,
+          createdBy: req.user.id,
+        })
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {
@@ -145,10 +196,13 @@ export class ConfigController {
 
   @Put(':id')
   @RequirePermission(Permission.WRITE_CONFIG)
-  async update(@Param('id') id: string, @Body() dto: UpdateConfigDto) {
+  async update(@Param('id') id: string, @Body() dto: UpdateConfigDto, @Req() req: any) {
     try {
       return await this.dbCircuitBreaker.execute(() =>
-        this.configService.update(id, dto)
+        this.configService.update(id, {
+          value: dto.value,
+          updatedBy: req.user.id,
+        })
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {
@@ -162,10 +216,10 @@ export class ConfigController {
   @Delete(':id')
   @RequirePermission(Permission.DELETE_CONFIG)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: string, @Body('deletedBy') deletedBy: string) {
+  async delete(@Param('id') id: string, @Req() req: any) {
     try {
       await this.dbCircuitBreaker.execute(() =>
-        this.configService.delete(id, deletedBy)
+        this.configService.delete(id, req.user.id)
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {
@@ -184,10 +238,10 @@ export class ConfigController {
 
   @Post(':id/rollback')
   @RequirePermission(Permission.WRITE_CONFIG)
-  async rollback(@Param('id') id: string, @Body() dto: RollbackDto) {
+  async rollback(@Param('id') id: string, @Body() dto: RollbackDto, @Req() req: any) {
     try {
       return await this.dbCircuitBreaker.execute(() =>
-        this.configService.rollback(id, dto.versionId, dto.rolledBackBy)
+        this.configService.rollback(id, dto.versionId, req.user.id)
       );
     } catch (error) {
       if (error.message === 'Circuit breaker is OPEN') {

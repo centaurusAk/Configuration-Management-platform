@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
+import { Organization } from '../entities/organization.entity';
 import { ApiKey } from '../entities/api-key.entity';
 
 export interface JwtPayload {
@@ -32,7 +33,7 @@ export class AuthService {
     password: string,
     organizationName: string,
     role: 'Admin' | 'Editor' | 'Viewer' = 'Admin',
-  ): Promise<{ token: string; user: User }> {
+  ): Promise<{ token: string; user: User; organizationName: string }> {
     // Check if user already exists
     const existingUser = await this.userRepository.findOne({ where: { email } });
     if (existingUser) {
@@ -55,6 +56,24 @@ export class AuthService {
       );
       const organizationId = organization[0].id;
 
+      // Create default project
+      const project = await queryRunner.manager.query(
+        'INSERT INTO projects (organization_id, name) VALUES ($1, $2) RETURNING id',
+        [organizationId, 'Default Project'],
+      );
+      const projectId = project[0].id;
+
+      // Create default environments
+      const envNames = ['development', 'staging', 'production'];
+      const defaultEnvIds: Record<string, string> = {};
+      for (const envName of envNames) {
+        const envResult = await queryRunner.manager.query(
+          'INSERT INTO environments (project_id, name) VALUES ($1, $2) RETURNING id',
+          [projectId, envName],
+        );
+        defaultEnvIds[envName] = envResult[0].id;
+      }
+
       // Create user
       const userResult = await queryRunner.manager.query(
         'INSERT INTO users (organization_id, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -62,12 +81,26 @@ export class AuthService {
       );
       const user = userResult[0];
 
+      // Create a default config key in development
+      const devEnvId = defaultEnvIds['development'];
+      const configKeyResult = await queryRunner.manager.query(
+        'INSERT INTO config_keys (organization_id, project_id, environment_id, key_name, value_type, current_value) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [organizationId, projectId, devEnvId, 'welcome.feature.enabled', 'boolean', JSON.stringify(true)],
+      );
+      const configKeyId = configKeyResult[0].id;
+
+      // Add a first version for the config key
+      await queryRunner.manager.query(
+        'INSERT INTO config_versions (config_key_id, value, created_by) VALUES ($1, $2, $3)',
+        [configKeyId, JSON.stringify(true), user.id],
+      );
+
       await queryRunner.commitTransaction();
 
       // Generate token
       const token = await this.generateToken(user);
 
-      return { token, user };
+      return { token, user, organizationName };
     } catch (error) {
       if (queryRunner.isTransactionActive) {
         await queryRunner.rollbackTransaction();
@@ -82,8 +115,11 @@ export class AuthService {
    * Authenticate user with email and password, return JWT token
    * Requirement 7.1: JWT authentication for dashboard
    */
-  async login(email: string, password: string): Promise<{ token: string; user: User }> {
-    const user = await this.userRepository.findOne({ where: { email } });
+  async login(email: string, password: string): Promise<{ token: string; user: User; organizationName: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['organization'],
+    });
     
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -102,8 +138,9 @@ export class AuthService {
     };
 
     const token = this.jwtService.sign(payload);
+    const organizationName = user.organization?.name || '';
     
-    return { token, user };
+    return { token, user, organizationName };
   }
 
   /**

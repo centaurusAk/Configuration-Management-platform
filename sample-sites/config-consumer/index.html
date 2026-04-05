@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Config Consumer — Sample Site</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-hover: #22252f;
+      --border: #2a2d3a;
+      --text: #e4e4e7;
+      --text-muted: #71717a;
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.15);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: #3a3d4a;
+    }
+
+    .card h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      font-weight: 500;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    input[type="text"]::placeholder {
+      color: #4a4d5a;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5558e6;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .status-idle {
+      background: rgba(113, 113, 122, 0.1);
+      color: var(--text-muted);
+    }
+
+    .status-loading {
+      background: rgba(99, 102, 241, 0.1);
+      color: #818cf8;
+    }
+
+    .status-success {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--success);
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-idle { background: var(--text-muted); }
+    .dot-loading {
+      background: #818cf8;
+      animation: pulse 1s infinite;
+    }
+    .dot-success { background: var(--success); }
+    .dot-error { background: var(--danger); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .result-panel {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .result-key {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .result-value {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.95rem;
+      color: var(--primary);
+      word-break: break-all;
+    }
+
+    .preview-card {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .preview-feature {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.4s ease;
+    }
+
+    .preview-feature.on {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--success);
+    }
+
+    .preview-feature.off {
+      background: rgba(239, 68, 68, 0.06);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    .preview-feature.value {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+    }
+
+    .toggle-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      transition: background 0.3s;
+    }
+
+    .toggle-dot.on { background: var(--success); box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+    .toggle-dot.off { background: var(--danger); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1rem;
+      justify-content: center;
+    }
+
+    .auto-refresh input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+
+    .raw-json {
+      margin-top: 1.25rem;
+      padding: 0.85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #a5b4fc;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>⚙ Config Consumer</h1>
+    <p>Test your configuration values using the SDK endpoint</p>
+  </div>
+
+  <!-- Connection Setup -->
+  <div class="card">
+    <h2>🔌 Connection</h2>
+    <div class="form-group">
+      <label for="apiUrl">Backend URL</label>
+      <input type="text" id="apiUrl" value="http://localhost:3000" placeholder="http://localhost:3000">
+    </div>
+    <div class="form-group">
+      <label for="apiKey">API Key</label>
+      <input type="text" id="apiKey" placeholder="Paste your SDK API key here">
+    </div>
+    <div class="form-group">
+      <label for="configKey">Config Key Name</label>
+      <input type="text" id="configKey" value="welcome.feature.enabled" placeholder="e.g. welcome.feature.enabled">
+    </div>
+    <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+      <button class="btn btn-primary" id="fetchBtn" onclick="fetchConfig()">
+        Fetch Config
+      </button>
+      <div id="statusBar" class="status-bar status-idle">
+        <span class="dot dot-idle" id="statusDot"></span>
+        <span id="statusText">Ready</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context (optional) -->
+  <div class="card">
+    <h2>🎯 Context (Optional)</h2>
+    <div class="form-group">
+      <label for="ctxUserId">user_id</label>
+      <input type="text" id="ctxUserId" placeholder="e.g. user-123">
+    </div>
+    <div class="form-group">
+      <label for="ctxRegion">region</label>
+      <input type="text" id="ctxRegion" placeholder="e.g. us-east-1">
+    </div>
+    <div class="form-group">
+      <label for="ctxTier">tier</label>
+      <input type="text" id="ctxTier" placeholder="e.g. premium">
+    </div>
+  </div>
+
+  <!-- Live Preview -->
+  <div class="card" id="previewCard" style="display: none;">
+    <h2>📡 Live Preview</h2>
+    <div class="preview-card">
+      <div id="previewFeature" class="preview-feature off">
+        <span class="toggle-dot off" id="previewDot"></span>
+        <span id="previewLabel">—</span>
+      </div>
+    </div>
+
+    <div class="auto-refresh">
+      <input type="checkbox" id="autoRefresh">
+      <label for="autoRefresh" style="margin: 0; cursor: pointer;">Auto-refresh every 5s</label>
+    </div>
+
+    <div class="raw-json" id="rawJson"></div>
+  </div>
+
+  <div class="footer">
+    Config Management Platform — SDK Consumer Demo
+  </div>
+
+  <script>
+    let refreshInterval = null;
+
+    function setStatus(type, text) {
+      const bar = document.getElementById('statusBar');
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+
+      bar.className = 'status-bar status-' + type;
+      dot.className = 'dot dot-' + type;
+      txt.textContent = text;
+    }
+
+    async function fetchConfig() {
+      const apiUrl = document.getElementById('apiUrl').value.trim();
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const configKey = document.getElementById('configKey').value.trim();
+
+      if (!apiKey) { setStatus('error', 'API key is required'); return; }
+      if (!configKey) { setStatus('error', 'Config key is required'); return; }
+
+      // Build query params from context
+      const params = new URLSearchParams();
+      const userId = document.getElementById('ctxUserId').value.trim();
+      const region = document.getElementById('ctxRegion').value.trim();
+      const tier = document.getElementById('ctxTier').value.trim();
+      if (userId) params.set('user_id', userId);
+      if (region) params.set('region', region);
+      if (tier) params.set('tier', tier);
+
+      const qs = params.toString() ? '?' + params.toString() : '';
+      const url = `${apiUrl}/api/v1/sdk/config/${encodeURIComponent(configKey)}${qs}`;
+
+      setStatus('loading', 'Fetching...');
+      document.getElementById('fetchBtn').disabled = true;
+
+      try {
+        const resp = await fetch(url, {
+          headers: { 'X-API-Key': apiKey },
+        });
+
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}));
+          throw new Error(errBody.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        setStatus('success', `Fetched at ${new Date().toLocaleTimeString()}`);
+        renderPreview(data);
+      } catch (err) {
+        setStatus('error', err.message);
+      } finally {
+        document.getElementById('fetchBtn').disabled = false;
+      }
+    }
+
+    function renderPreview(data) {
+      const card = document.getElementById('previewCard');
+      const feature = document.getElementById('previewFeature');
+      const dot = document.getElementById('previewDot');
+      const label = document.getElementById('previewLabel');
+      const rawJson = document.getElementById('rawJson');
+
+      card.style.display = 'block';
+
+      // Show raw JSON
+      rawJson.textContent = JSON.stringify(data, null, 2);
+
+      const val = data.value;
+      const valType = data.value_type || typeof val;
+
+      if (valType === 'boolean' || typeof val === 'boolean') {
+        const isOn = val === true || val === 'true';
+        feature.className = 'preview-feature ' + (isOn ? 'on' : 'off');
+        dot.className = 'toggle-dot ' + (isOn ? 'on' : 'off');
+        label.textContent = `${data.key}: ${isOn ? 'ENABLED' : 'DISABLED'}`;
+      } else {
+        feature.className = 'preview-feature value';
+        dot.style.display = 'none';
+        label.textContent = `${data.key}: ${JSON.stringify(val)}`;
+      }
+    }
+
+    // Auto-refresh
+    document.getElementById('autoRefresh').addEventListener('change', function() {
+      if (this.checked) {
+        fetchConfig();
+        refreshInterval = setInterval(fetchConfig, 5000);
+      } else {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    });
+
+    // Allow Enter key to trigger fetch
+    document.querySelectorAll('input[type="text"]').forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') fetchConfig();
+      });
+    });
+  </script>
+</body>
+</html>
