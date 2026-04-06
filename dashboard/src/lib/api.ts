@@ -72,6 +72,11 @@ export class ApiClient {
     return response.data;
   }
 
+  async createProject(name: string) {
+    const response = await this.client.post('/projects', { name });
+    return response.data;
+  }
+
   async getEnvironments(projectId: string) {
     const response = await this.client.get(`/projects/${projectId}/environments`);
     return response.data;

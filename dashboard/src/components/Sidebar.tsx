@@ -14,6 +14,7 @@ export function Sidebar() {
     { href: '/dashboard/rules', label: 'Rules', roles: ['Admin', 'Editor', 'Viewer'] },
     { href: '/dashboard/audit', label: 'Audit Logs', roles: ['Admin', 'Editor', 'Viewer'] },
     { href: '/dashboard/api-keys', label: 'API Keys', roles: ['Admin'] },
+    { href: '/dashboard/projects', label: 'Projects', roles: ['Admin'] },
   ];
 
   const visibleItems = navItems.filter(item => 

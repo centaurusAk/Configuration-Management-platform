@@ -227,6 +227,13 @@
       <label>API Key:</label>
       <input type="text" id="apiKeyInput" placeholder="Paste your SDK API key here">
       <button class="add-btn" id="connectBtn" onclick="connectAndFetch()">Connect</button>
+      <label>Region context:</label>
+      <select id="regionContext" style="background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.4rem; border-radius: 6px;">
+        <option value="US">US - United States</option>
+        <option value="EU">EU - Europe</option>
+        <option value="IN">IN - India</option>
+        <option value="UK">UK - United Kingdom</option>
+      </select>
       <div class="status loading" id="statusIndicator">
         <span class="sdot"></span>
         <span id="statusText">Not connected</span>
@@ -312,7 +319,8 @@
       setStatus('loading', 'Connecting...');
 
       try {
-        const resp = await fetch('http://localhost:3000/api/v1/sdk/config/store.flash_sale.enabled', {
+        const region = document.getElementById('regionContext').value;
+        const resp = await fetch(`http://localhost:3000/api/v1/sdk/config/store.flash_sale.enabled?region=${region}`, {
           headers: { 'X-API-Key': apiKey },
         });
 

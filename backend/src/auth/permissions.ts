@@ -13,6 +13,7 @@ export enum Permission {
   RULE_CREATE = 'create:rule',
   RULE_UPDATE = 'update:rule',
   RULE_DELETE = 'delete:rule',
+  MANAGE_PROJECTS = 'manage:projects',
 }
 
 /**
@@ -34,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     Permission.RULE_CREATE,
     Permission.RULE_UPDATE,
     Permission.RULE_DELETE,
+    Permission.MANAGE_PROJECTS,
   ],
   Editor: [
     Permission.READ_CONFIG,

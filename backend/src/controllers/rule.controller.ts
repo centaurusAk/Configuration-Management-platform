@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { RuleEngineService } from '../services/rule-engine.service';
 import { RuleRepository } from '../repositories/rule.repository';
@@ -18,27 +19,73 @@ import { RequirePermission } from '../auth/require-permission.decorator';
 import { Permission } from '../auth/permissions';
 import { Condition, Context } from '../types/models';
 
-// DTOs for request/response
-export class CreateRuleDto {
-  config_key_id: string;
-  priority: number;
-  conditions: Condition[];
+import { IsString, IsNumber, IsBoolean, IsArray, IsOptional, ValidateNested, IsObject, IsDefined } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class ConditionDto {
+  @IsString()
+  attribute: string;
+
+  @IsString()
+  operator: string;
+
+  @IsDefined()
   value: any;
+}
+
+export class CreateRuleDto {
+  @IsString()
+  config_key_id: string;
+
+  @IsNumber()
+  priority: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConditionDto)
+  conditions: ConditionDto[];
+
+  @IsDefined()
+  value: any;
+
+  @IsOptional()
+  @IsBoolean()
   enabled?: boolean;
-  createdBy: string;
+
+  @IsOptional()
+  @IsString()
+  createdBy?: string;
 }
 
 export class UpdateRuleDto {
+  @IsOptional()
+  @IsNumber()
   priority?: number;
-  conditions?: Condition[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConditionDto)
+  conditions?: ConditionDto[];
+
+  @IsOptional()
   value?: any;
+
+  @IsOptional()
+  @IsBoolean()
   enabled?: boolean;
-  updatedBy: string;
+
+  @IsOptional()
+  @IsString()
+  updatedBy?: string;
 }
 
 export class TestRuleDto {
+  @IsString()
   config_key_id: string;
-  context: Context;
+
+  @IsObject()
+  context: object;
 }
 
 @Controller('rules')
@@ -51,28 +98,28 @@ export class RuleController {
 
   @Post()
   @RequirePermission(Permission.RULE_CREATE)
-  async create(@Body() dto: CreateRuleDto) {
+  async create(@Body() dto: CreateRuleDto, @Req() req: any) {
     return this.ruleEngineService.createRule(
       dto.config_key_id,
       dto.priority,
       dto.conditions,
       dto.value,
-      dto.createdBy,
+      req.user.id || dto.createdBy || 'system',
       dto.enabled ?? true,
     );
   }
 
   @Put(':id')
   @RequirePermission(Permission.RULE_UPDATE)
-  async update(@Param('id') id: string, @Body() dto: UpdateRuleDto) {
-    return this.ruleEngineService.updateRule(id, dto, dto.updatedBy);
+  async update(@Param('id') id: string, @Body() dto: UpdateRuleDto, @Req() req: any) {
+    return this.ruleEngineService.updateRule(id, dto, req.user.id || dto.updatedBy || 'system');
   }
 
   @Delete(':id')
   @RequirePermission(Permission.RULE_DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: string, @Body('deletedBy') deletedBy: string) {
-    await this.ruleEngineService.deleteRule(id, deletedBy);
+  async delete(@Param('id') id: string, @Req() req: any, @Body('deletedBy') deletedBy: string) {
+    await this.ruleEngineService.deleteRule(id, req.user.id || deletedBy || 'system');
   }
 
   @Get('config/:configId')

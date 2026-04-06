@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Param,
   UseGuards,
   Req,
@@ -41,5 +43,29 @@ export class ProjectController {
       where: { project_id: projectId },
       order: { created_at: 'ASC' },
     });
+  }
+
+  @Post()
+  @RequirePermission(Permission.MANAGE_PROJECTS)
+  async create(@Req() req: any, @Body() body: { name: string }) {
+    const user = req.user;
+    
+    // Create the project
+    const project = this.projectRepository.create({
+      organization_id: user.organization_id,
+      name: body.name,
+    });
+    const savedProject = await this.projectRepository.save(project);
+
+    // Create default environments
+    const environments = ['development', 'staging', 'production'].map(name => {
+      return this.environmentRepository.create({
+        project_id: savedProject.id,
+        name,
+      });
+    });
+    await this.environmentRepository.save(environments);
+
+    return savedProject;
   }
 }
